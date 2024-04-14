@@ -1,0 +1,44 @@
+# Simple testing
+
+
+import requests
+import json
+import base64
+
+API_KEY = "Replace-your-API-key"
+
+with open("image.jpg", "rb") as img_file:
+    image_data = img_file.read()
+
+image_base64 = base64.b64encode(image_data).decode('utf-8')
+
+payload = {
+    "contents": [
+        {
+            "parts": [
+                {"text": "Give me answer."},
+                {
+                    "inlineData": {
+                        "mimeType": "image/jpeg",
+                        "data": image_base64
+                    }
+                }
+            ]
+        }
+    ]
+}
+
+url = f"https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent?key={API_KEY}"  
+headers = {"Content-Type": "application/json"}
+
+try:
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status() 
+    response_json = response.json()
+    print("Response JSON:", response_json)
+except requests.exceptions.HTTPError as http_err:
+    print(f"HTTP error occurred: {http_err}")
+except json.JSONDecodeError as json_err:
+    print(f"JSON decoding error occurred: {json_err}")
+except Exception as err:
+    print(f"An error occurred: {err}")

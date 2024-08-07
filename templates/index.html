@@ -20,6 +20,7 @@
         .container {
             max-width: 600px;
             padding: 40px;
+            margin: 20px 0;
             background-color: #fff;
             border-radius: 20px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
@@ -73,11 +74,13 @@
         }
 
         #result {
+            display: none;
             margin-top: 30px;
             padding: 20px;
             border-radius: 5px;
             background-color: #f2f2f2;
             min-height: 150px;
+            max-height: 300px;
             overflow-y: auto;
         }
 
@@ -86,36 +89,53 @@
             font-size: 16px;
             line-height: 1.6;
             color: #333;
+            max-height: 100%;
+            overflow-y: auto;
+            text-align: left;
         }
 
-        footer {
-            bottom: 0;
-            left: 0;
-            width: 100%;
+        .wave-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .wave-loader div {
+            width: 1em;
+            height: 1em;
             background-color: #007bff;
-            padding: 10px 0;
-            text-align: center;
-            color: #fff;
-            font-size: 14px;
+            border-radius: 100%;
+            animation: wave 1.5s infinite ease-in-out;
+            display: inline-block;
+            margin: 0 0.2em;
         }
 
-        .wave {
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 100%;
-            height: 50px;
-            background-image: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"%3E%3Cpath fill="%23007BFF" fill-opacity="1" d="M0,256L60,250.7C120,245,240,235,360,224C480,213,600,203,720,208C840,213,960,235,1080,245.3C1200,256,1320,256,1380,256L1440,256L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"%3E%3C/path%3E%3C/svg%3E');
-            background-size: cover;
-            z-index: 1;
+        .wave-loader div:nth-child(2) {
+            animation-delay: 0.3s;
         }
 
-        .emoji {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 40px;
-            z-index: 2;
+        .wave-loader div:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes wave {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -127,17 +147,31 @@
         <input type="file" id="imageInput" accept="image/*" required>
         <textarea id="textInput" placeholder="Enter your doubt..." required></textarea>
         <button onclick="generateContent()">Clear Doubt</button>
-        <div id="result"></div>
-        <div class="wave"></div>
+        <div class="wave-loader" id="waveLoader">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <div id="result">
+            <p id="responseText"></p>
+        </div>
+        <button id="copyButton" class="hidden" onclick="copyToClipboard()">Copy</button>
+        <button id="playButton" class="hidden" onclick="playAudio()">Play</button>
+        <button id="stopButton" class="hidden" onclick="stopAudio()">Stop</button>
     </div>
-    <footer>
-        &copy; 2024 AI Doubt Clear. All rights reserved.
-    </footer>
     <script>
+        var synth = window.speechSynthesis;
+        var currentUtterance = null;
+
         function generateContent() {
             var fileInput = document.getElementById('imageInput');
             var textInput = document.getElementById('textInput');
             var resultDiv = document.getElementById('result');
+            var waveLoader = document.getElementById('waveLoader');
+            var responseText = document.getElementById('responseText');
+            var copyButton = document.getElementById('copyButton');
+            var playButton = document.getElementById('playButton');
+            var stopButton = document.getElementById('stopButton');
 
             var file = fileInput.files[0];
             var text = textInput.value;
@@ -146,6 +180,8 @@
                 alert("Please select an image and enter your doubt.");
                 return;
             }
+
+            waveLoader.style.display = 'block';
 
             var reader = new FileReader();
             reader.readAsDataURL(file);
@@ -171,17 +207,47 @@
 
                 xhr.onreadystatechange = function () {
                     if (xhr.readyState === XMLHttpRequest.DONE) {
+                        waveLoader.style.display = 'none';
                         if (xhr.status === 200) {
                             var response = JSON.parse(xhr.responseText);
-                            resultDiv.innerHTML = "<p>Clear Explanation:</p><p>" + response.generated_content + "</p>";
+                            responseText.innerHTML = response.generated_content;
+                            resultDiv.style.display = 'block';
+                            copyButton.classList.remove('hidden');
+                            playButton.classList.remove('hidden');
+                            stopButton.classList.remove('hidden');
                         } else {
-                            resultDiv.innerHTML = "<p>Error: " + xhr.statusText + "</p>";
+                            resultDiv.innerHTML = '<p>Error generating content. Please try again.</p>';
+                            resultDiv.style.display = 'block';
                         }
                     }
                 };
 
                 xhr.send(JSON.stringify(payload));
             };
+        }
+
+        function copyToClipboard() {
+            var responseText = document.getElementById('responseText');
+            var range = document.createRange();
+            range.selectNode(responseText);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+        }
+
+        function playAudio() {
+            var responseText = document.getElementById('responseText').innerText;
+            var utterance = new SpeechSynthesisUtterance(responseText);
+            synth.speak(utterance);
+            currentUtterance = utterance;
+        }
+
+        function stopAudio() {
+            if (currentUtterance) {
+                synth.cancel();
+                currentUtterance = null;
+            }
         }
     </script>
 </body>

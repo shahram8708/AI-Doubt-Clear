@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import base64
 import requests
 import logging
+import markdown
 
 app = Flask(__name__)
 
@@ -29,14 +30,15 @@ def generate_content():
         headers = {"Content-Type": "application/json"}
 
         response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()  
+        response.raise_for_status()
         response_json = response.json()
         logging.debug("Response JSON: %s", response_json)
 
         generated_content = response_json.get('candidates')[0]['content']['parts'][0]['text']
 
         if generated_content:
-            return jsonify({'generated_content': generated_content})
+            html_content = markdown.markdown(generated_content)
+            return jsonify({'generated_content': html_content})
         else:
             return jsonify({'error': 'Failed to generate content.'}), 500
 

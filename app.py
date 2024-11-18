@@ -6,7 +6,7 @@ import markdown
 
 app = Flask(__name__)
 
-API_KEY = "AIzaSyBPgXeivnFmtX6-PSu3XudU0-EraotrYf4"
+API_KEY = "API_Key"
 
 logging.basicConfig(level=logging.DEBUG)
 
